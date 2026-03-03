@@ -6,6 +6,7 @@ $help = @"
 
   Repo
   ----
+  git-clone <url> [dir]     Clone a repo by URL; optional dir; inits submodules
   git-pull                  Update to latest commit and init/update submodules
   git-push                  Push changes (including submodules)
   git-commit [msg]          Commit latest changes (default: "Update")

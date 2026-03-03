@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Clone a repo by URL (optional: into directory)
+set -e
+if [ -z "$1" ]; then
+  echo "Usage: git-clone <url> [directory]" >&2
+  echo "  Clone a repository. If directory is omitted, uses repo name from URL." >&2
+  exit 1
+fi
+url="$1"
+dir="${2:-}"
+if [ -n "$dir" ]; then
+  git clone "$url" "$dir"
+  cd "$dir"
+  git submodule update --init --recursive
+else
+  git clone "$url"
+  # cd into the cloned folder (repo name from URL)
+  clone_dir=$(basename "${url%.git}")
+  cd "$clone_dir"
+  git submodule update --init --recursive
+fi

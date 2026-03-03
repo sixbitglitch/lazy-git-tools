@@ -18,6 +18,7 @@ Cross-platform git helper scripts: pull, push, commit, submodules, branch, creat
 ### Repo
 | Command | Description |
 |---------|-------------|
+| `git-clone` *url* [*dir*] | Clone a repo by URL; optional *dir*; inits submodules |
 | `git-pull` | Update to latest commit and init/update submodules in this repo |
 | `git-push` | Push changes (including submodules) |
 | `git-commit` [*msg*] | Commit latest changes (default: `"Update"`) |
