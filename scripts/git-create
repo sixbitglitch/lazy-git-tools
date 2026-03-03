@@ -128,9 +128,28 @@ fi
 # Prefer main as default branch
 git branch -M main 2>/dev/null || true
 
+# Ensure .gitignore contains .DS_Store
+if [ ! -f .gitignore ]; then
+  echo ".DS_Store" > .gitignore
+else
+  grep -q "^\.DS_Store$" .gitignore 2>/dev/null || echo ".DS_Store" >> .gitignore
+fi
+
+# Ensure README.md exists (empty if not present)
+[ -f README.md ] || touch README.md
+
+# Ensure at least one commit exists (empty repo has no refs/heads/main to push)
+git add -A
+git commit -m "Initial commit" 2>/dev/null || true
+if ! git rev-list -1 HEAD &>/dev/null; then
+  echo "# $repo_name" > README.md
+  git add README.md
+  git commit -m "Initial commit"
+fi
+
 # So first git-push sets upstream automatically
 git config push.autoSetupRemote true
 
 echo ""
 echo "Repo created: $clone_url"
-echo "Push your code: git add -A && git commit -m \"Initial commit\" && git push -u origin main"
+echo "Push your code: git-push"

@@ -108,9 +108,33 @@ try {
 
 git branch -M main 2>$null
 
+# Ensure .gitignore contains .DS_Store
+if (-not (Test-Path .gitignore)) {
+  Set-Content -Path .gitignore -Value ".DS_Store"
+} else {
+  $content = Get-Content .gitignore -Raw
+  if ($content -notmatch "(?m)^\.DS_Store\s*$") {
+    Add-Content -Path .gitignore -Value ".DS_Store"
+  }
+}
+
+# Ensure README.md exists (empty if not present)
+if (-not (Test-Path README.md)) {
+  New-Item -Path README.md -ItemType File -Force | Out-Null
+}
+
+# Ensure at least one commit exists (empty repo has no refs/heads/main to push)
+git add -A 2>$null
+git commit -m "Initial commit" 2>$null
+if (-not (git rev-list -1 HEAD 2>$null)) {
+  Set-Content -Path README.md -Value "# $repoName"
+  git add README.md
+  git commit -m "Initial commit"
+}
+
 # So first git-push sets upstream automatically
 git config push.autoSetupRemote true
 
 Write-Host ""
 Write-Host "Repo created: $($r.clone_url)"
-Write-Host "Push your code: git add -A && git commit -m `"Initial commit`" && git push -u origin main"
+Write-Host "Push your code: git-push"
