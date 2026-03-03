@@ -1,0 +1,223 @@
+#!/usr/bin/env bash
+# Add a .gitignore template by project type. Usage: git-create-ignore <unity|godot|node|python|arduino|pico|esp32|dotnet>
+set -e
+VALID="unity godot node python arduino pico esp32 dotnet"
+if [ $# -lt 1 ]; then
+  echo "Usage: git-create-ignore <ignoretype>" >&2
+  echo "Types: $VALID" >&2
+  exit 1
+fi
+type=$(echo "$1" | tr '[:upper:]' '[:lower:]')
+case "$type" in
+  unity|godot|node|python|arduino|pico|esp32|dotnet) ;;
+  *) echo "Unknown type: $1. Use one of: $VALID" >&2; exit 1 ;;
+esac
+
+root=$(git rev-parse --show-toplevel 2>/dev/null) || root="."
+cd "$root"
+ignore_file=".gitignore"
+marker="# lazy-git-tools: $type"
+common_marker="# lazy-git-tools: common"
+if [ -f "$ignore_file" ] && grep -q "^$marker$" "$ignore_file" 2>/dev/null; then
+  echo ".gitignore already has $type rules. Skipping."
+  exit 0
+fi
+
+# Ensure common OS/temp/thumbnail ignores are present (once)
+if [ ! -f "$ignore_file" ] || ! grep -q "^$common_marker$" "$ignore_file" 2>/dev/null; then
+  if [ -f "$ignore_file" ] && [ -s "$ignore_file" ]; then
+    echo "" >> "$ignore_file"
+  fi
+  cat >> "$ignore_file" << 'COMMON'
+# lazy-git-tools: common
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+*.swp
+*.swo
+*~
+.Spotlight-V100
+.Trashes
+COMMON
+fi
+
+append_ignore() {
+  if [ -f "$ignore_file" ] && [ -s "$ignore_file" ]; then
+    echo "" >> "$ignore_file"
+  fi
+  echo "$marker" >> "$ignore_file"
+  cat >> "$ignore_file"
+}
+
+case "$type" in
+  unity)
+    append_ignore << 'UNITY'
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Mm]emoryCaptures/
+/[Rr]ecordings/
+*.log
+*.blend1
+*.blend1.meta
+.vs/
+.gradle/
+ExportedObj/
+.consulo/
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+*.pidb.meta
+*.pdb.meta
+*.mdb.meta
+sysinfo.txt
+mono_crash.*
+*.apk
+*.aab
+*.unitypackage
+*.unitypackage.meta
+*.app
+crashlytics-build.properties
+*.DotSettings.user
+UNITY
+    ;;
+  godot)
+    append_ignore << 'GODOT'
+.godot/
+.import/
+.mono/
+*.translation
+export_presets.cfg
+mono_crash.*.json
+GODOT
+    ;;
+  node)
+    append_ignore << 'NODE'
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+node_modules/
+jspm_packages/
+.npm
+.eslintcache
+.stylelintcache
+.env
+.env.*
+!.env.example
+.cache
+.parcel-cache
+.next
+out
+.nuxt
+dist
+.output
+*.tsbuildinfo
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+NODE
+    ;;
+  python)
+    append_ignore << 'PYTHON'
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+eggs/
+.eggs/
+*.egg-info/
+*.egg
+.env
+.venv
+env/
+venv/
+ENV/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+PYTHON
+    ;;
+  arduino)
+    append_ignore << 'ARDUINO'
+build/
+*.elf
+*.hex
+*.bin
+*.map
+.vscode/
+ARDUINO
+    ;;
+  pico)
+    append_ignore << 'PICO'
+build/
+*.elf
+*.hex
+*.bin
+*.uf2
+*.map
+.vscode/
+PICO
+    ;;
+  esp32)
+    append_ignore << 'ESP32'
+build/
+sdkconfig.old
+managed_components/
+*.elf
+*.bin
+*.map
+.vscode/
+ESP32
+    ;;
+  dotnet)
+    append_ignore << 'DOTNET'
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.nupkg
+*.snupkg
+project.lock.json
+project.fragment.lock.json
+artifacts/
+DOTNET
+    ;;
+esac
+echo "Added $type .gitignore rules to $ignore_file"

@@ -1,21 +1,40 @@
 # Show all lazy git-tools commands
-@"
-lazy git-tools — run from any terminal
+$help = @"
 
-  git-pull                    Update to latest commit and init/update submodules in this repo
-  git-push                    Push changes (including submodules)
-  git-commit [msg]            Commit latest changes (default: "Update")
-  git-branch <name>           Create and switch to a new branch
-  git-update-submodules [msg] Update all submodules: commit in each, then commit here (default: "Update")
-  git-add-submodule <url> [name]     Add a repo as submodule in the current folder
-  git-remove-submodule <path> Remove a submodule and clean up
-  git-pull-submodule          Pull only the current submodule (run from inside submodule)
-  git-push-submodule          Push only the current submodule (run from inside submodule)
-  git-commit-submodule [msg]  Commit only in the current submodule (default: "Update")
-  git-create                  Turn this folder into a repo: prompts for name, org, public/private
-  git-switch-org              List GitHub orgs, transfer this repo to the one you choose
-  git-switch-private          Set this GitHub repo to private
-  git-switch-public           Set this GitHub repo to public
-  git-login                   Log in to Git via browser (GitHub device flow)
-  git-help                    Show this list
+  lazy-git-tools
+  =========================================================================
+
+  Repo
+  ----
+  git-pull                  Update to latest commit and init/update submodules
+  git-push                  Push changes (including submodules)
+  git-commit [msg]          Commit latest changes (default: "Update")
+  git-branch <name>         Create and switch to a new branch with <name>
+  git-switch                List branches; pick one to switch to
+  git-pr                    Open GitHub PR page for the current branch
+  git-create-ignore <type>  Add .gitignore (unity, godot, node, python, arduino, pico, esp32, dotnet)
+  git-add-license <type>    Add LICENSE (CC, unlicense, gpl, mit, none)
+
+  Submodules  (run from inside the submodule folder)
+  ---------------------------------------------------------------
+  git-update-submodules [msg]   Commit in all submodules, then in this repo
+  git-add-submodule <url> [name]  Add a repo as submodule in the current folder
+  git-remove-submodule <path>     Remove a submodule and clean up
+  git-pull-submodule              Pull only the current submodule
+  git-push-submodule              Push only the current submodule
+  git-commit-submodule [msg]      Commit only in the current submodule
+
+  GitHub
+  ------
+  git-create                Turn this folder into a repo (prompts for name, org, public/private)
+  git-switch-org            List orgs or "none" = your user; transfer repo there, update remote, commit & push
+  git-switch-private        Set this GitHub repo to private
+  git-switch-public         Set this GitHub repo to public
+  git-login                 Log in to Git via browser (GitHub device flow)
+
+  Other
+  -----
+  git-help                  Show this list
+
 "@
+Write-Host $help

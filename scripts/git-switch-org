@@ -45,6 +45,11 @@ if [ -z "$current_owner" ] || [ -z "$repo_name" ]; then
   exit 1
 fi
 
+# Fetch current user (for "none" = my account)
+user_json=$(curl -s -H "Authorization: token $token" -H "Accept: application/vnd.github.v3+json" "https://api.github.com/user")
+my_login=$(echo "$user_json" | tr -d '\n' | sed -n 's/.*"login"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
+[ -z "$my_login" ] && echo "Could not get current user from GitHub." >&2 && exit 1
+
 # Fetch organisations
 orgs_json=$(curl -s -H "Authorization: token $token" -H "Accept: application/vnd.github.v3+json" "https://api.github.com/user/orgs")
 orgs_flat=$(echo "$orgs_json" | tr -d '\n')
@@ -53,14 +58,9 @@ while IFS= read -r line; do
   [ -n "$line" ] && orgs+=("$line")
 done < <(echo "$orgs_flat" | grep -o '"login"[[:space:]]*:[[:space:]]*"[^"]*"' | sed 's/.*:[[:space:]]*"\([^"]*\)".*/\1/')
 
-if [ ${#orgs[@]} -eq 0 ]; then
-  echo "No organisations found for your account." >&2
-  exit 1
-fi
-
 echo "Current repo: $current_owner/$repo_name"
-echo "Select new organisation (repo will be transferred there):"
-echo "  0) none (cancel)"
+echo "Select new owner (repo will be transferred there):"
+echo "  0) none (my user account: $my_login)"
 i=1
 for o in "${orgs[@]}"; do
   mark=""
@@ -71,14 +71,14 @@ done
 read -r choice
 choice=$(echo "${choice:-0}" | tr -d '[:space:]')
 if [ -z "$choice" ] || [ "$choice" = "0" ]; then
-  echo "Cancelled."
-  exit 0
+  new_owner="$my_login"
+else
+  if [ "$choice" -lt 1 ] 2>/dev/null || [ "$choice" -gt "${#orgs[@]}" ]; then
+    echo "Invalid choice." >&2
+    exit 1
+  fi
+  new_owner="${orgs[$((choice - 1))]}"
 fi
-if [ "$choice" -lt 1 ] 2>/dev/null || [ "$choice" -gt "${#orgs[@]}" ]; then
-  echo "Invalid choice." >&2
-  exit 1
-fi
-new_owner="${orgs[$((choice - 1))]}"
 if [ "$new_owner" = "$current_owner" ]; then
   echo "Already under $current_owner. Nothing to do."
   exit 0
@@ -98,10 +98,27 @@ if [ "$http_code" -ge 400 ]; then
   exit 1
 fi
 
+# Transfer can be async or require org acceptance; wait for repo to appear at new location
+echo "Waiting for repo at $new_owner/$repo_name..."
+max=20
+i=0
+while [ $i -lt $max ]; do
+  code=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: token $token" "https://api.github.com/repos/${new_owner}/${repo_name}")
+  [ "$code" = "200" ] && break
+  sleep 3
+  i=$((i + 1))
+done
+if [ "$code" != "200" ]; then
+  echo "Repo not yet available at $new_owner/$repo_name. If the org must accept the transfer, do that in GitHub, then run: git push" >&2
+fi
+
 git remote set-url origin "https://github.com/${new_owner}/${repo_name}.git"
 echo "Remote updated to $new_owner/$repo_name."
 
 git add -A
 git commit -m "Switch organisation to $new_owner" 2>/dev/null || true
-git push
+if ! git push 2>/dev/null; then
+  echo "Push failed. If the transfer is still pending or required acceptance, complete it on GitHub then run: git push" >&2
+  exit 1
+fi
 echo "Done."

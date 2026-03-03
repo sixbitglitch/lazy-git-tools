@@ -41,19 +41,25 @@ $headers = @{
   Authorization = "token $token"
   Accept        = "application/vnd.github.v3+json"
 }
+$myLogin = $null
+try {
+  $user = Invoke-RestMethod -Uri "https://api.github.com/user" -Headers $headers
+  $myLogin = $user.login
+} catch { }
+if (-not $myLogin) {
+  Write-Error "Could not get current user from GitHub."
+  exit 1
+}
+
 $orgs = @()
 try {
   $orgsList = Invoke-RestMethod -Uri "https://api.github.com/user/orgs" -Headers $headers
   $orgs = @($orgsList | ForEach-Object { $_.login })
 } catch { }
-if ($orgs.Count -eq 0) {
-  Write-Error "No organisations found for your account."
-  exit 1
-}
 
 Write-Host "Current repo: $currentOwner/$repoName"
-Write-Host "Select new organisation (repo will be transferred there):"
-Write-Host "  0) none (cancel)"
+Write-Host "Select new owner (repo will be transferred there):"
+Write-Host "  0) none (my user account: $myLogin)"
 $i = 1
 foreach ($o in $orgs) {
   $mark = if ($o -eq $currentOwner) { " (current)" } else { "" }
@@ -62,15 +68,15 @@ foreach ($o in $orgs) {
 }
 $choice = Read-Host
 if ([string]::IsNullOrWhiteSpace($choice) -or $choice.Trim() -eq "0") {
-  Write-Host "Cancelled."
-  exit 0
+  $newOwner = $myLogin
+} else {
+  $choiceNum = 0
+  if (-not [int]::TryParse($choice.Trim(), [ref]$choiceNum) -or $choiceNum -lt 1 -or $choiceNum -gt $orgs.Count) {
+    Write-Error "Invalid choice."
+    exit 1
+  }
+  $newOwner = $orgs[$choiceNum - 1]
 }
-$choiceNum = 0
-if (-not [int]::TryParse($choice.Trim(), [ref]$choiceNum) -or $choiceNum -lt 1 -or $choiceNum -gt $orgs.Count) {
-  Write-Error "Invalid choice."
-  exit 1
-}
-$newOwner = $orgs[$choiceNum - 1]
 if ($newOwner -eq $currentOwner) {
   Write-Host "Already under $currentOwner. Nothing to do."
   exit 0
@@ -90,10 +96,30 @@ try {
   exit 1
 }
 
+# Transfer can be async or require org acceptance; wait for repo to appear at new location
+Write-Host "Waiting for repo at $newOwner/$repoName..."
+$max = 20; $i = 0; $code = 0
+while ($i -lt $max) {
+  try {
+    $r = Invoke-WebRequest -Uri "https://api.github.com/repos/$newOwner/$repoName" -Headers $headers -Method Get -UseBasicParsing -ErrorAction Stop
+    $code = $r.StatusCode
+  } catch { if ($_.Exception.Response) { $code = $_.Exception.Response.StatusCode.value__ } }
+  if ($code -eq 200) { break }
+  Start-Sleep -Seconds 3
+  $i++
+}
+if ($code -ne 200) {
+  Write-Host "Repo not yet available at $newOwner/$repoName. If the org must accept the transfer, do that in GitHub, then run: git push" -ForegroundColor Yellow
+}
+
 git remote set-url origin "https://github.com/${newOwner}/${repoName}.git"
 Write-Host "Remote updated to $newOwner/$repoName."
 
 git add -A 2>$null
 git commit -m "Switch organisation to $newOwner" 2>$null
-git push
+git push 2>$null
+if ($LASTEXITCODE -ne 0) {
+  Write-Host "Push failed. If the transfer is still pending or required acceptance, complete it on GitHub then run: git push" -ForegroundColor Yellow
+  exit 1
+}
 Write-Host "Done."

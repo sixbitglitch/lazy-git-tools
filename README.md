@@ -6,25 +6,43 @@ Cross-platform git helper scripts: pull, push, commit, submodules, branch, creat
 
 ## Scripts
 
-Run submodule commands (`git-*-submodule`) from inside the submodule directory; they act on that folder only.
+### GitHub
+| Command | Description |
+|---------|-------------|
+| `git-create` | Turn this folder into a repo: prompts for name, org, public/private, then creates on GitHub and adds remote |
+| `git-switch-org` | List your GitHub orgs (or “none” = your user); transfer this repo there, update remote, commit & push |
+| `git-switch-private` | Set this GitHub repo to private |
+| `git-switch-public` | Set this GitHub repo to public |
+| `git-login` | Log in to Git via browser (GitHub device flow) |
 
+### Repo
 | Command | Description |
 |---------|-------------|
 | `git-pull` | Update to latest commit and init/update submodules in this repo |
 | `git-push` | Push changes (including submodules) |
 | `git-commit` [*msg*] | Commit latest changes (default: `"Update"`) |
-| `git-branch` *name* | Create and switch to a new branch |
-| `git-update-submodules` [*msg*] | Update all submodules in this repo: commit in each, then commit here (default: `"Update"`) |
+| `git-branch` *name* | Create and switch to a new branch with *name* |
+| `git-switch` | List branches; pick one to switch to |
+| `git-pr` | Open GitHub PR page for the current branch |
+| `git-create-ignore` *type* | Add .gitignore for *type*: unity, godot, node, python, arduino, pico, esp32, dotnet |
+| `git-add-license` *type* | Add LICENSE file: CC, unlicense, gpl, mit, or none |
+
+### Submodules
+Run `git-*-submodule` from inside the submodule directory; they act on that folder only.
+| Command | Description |
+|---------|-------------|
+| `git-update-submodules` [*msg*] | Commit in all submodules, then in this repo (default: `"Update"`) |
 | `git-add-submodule` *url* [*name*] | Add a repo as submodule in the **current folder** (not repo root) |
 | `git-remove-submodule` *path* | Remove a submodule and clean up |
 | `git-pull-submodule` | Pull only the **current** submodule |
 | `git-push-submodule` | Push only the **current** submodule |
 | `git-commit-submodule` [*msg*] | Commit only in the **current** submodule (default: `"Update"`) |
-| `git-create` | Turn this folder into a repo: prompts for name, org, public/private, then creates on GitHub and adds remote |
-| `git-switch-org` | List your GitHub orgs, choose one; transfer this repo there, update remote, commit & push |
-| `git-switch-private` | Set this GitHub repo to private |
-| `git-switch-public` | Set this GitHub repo to public |
-| `git-login` | Log in to Git via browser (GitHub device flow) |
+
+
+
+### Other
+| Command | Description |
+|---------|-------------|
 | `git-help` | List all lazy git-tools commands |
 
 ## Setup

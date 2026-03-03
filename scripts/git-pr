@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Open GitHub PR page for the current branch
+set -e
+root=$(git rev-parse --show-toplevel)
+cd "$root"
+origin=$(git remote get-url origin 2>/dev/null) || true
+[ -z "$origin" ] && echo "No remote 'origin' found." >&2 && exit 1
+owner=$(echo "$origin" | sed -n 's|.*github\.com[:/]\([^/]*\)/.*|\1|p')
+repo=$(echo "$origin" | sed -n 's|.*github\.com[:/][^/]*/\([^/]*\)$|\1|p')
+repo="${repo%.git}"
+[ -z "$owner" ] || [ -z "$repo" ] && echo "Could not parse owner/repo from origin (not a GitHub repo?)." >&2 && exit 1
+branch=$(git branch --show-current)
+url="https://github.com/${owner}/${repo}/pull/new/${branch}"
+echo "Opening $url"
+if command -v xdg-open &>/dev/null; then
+  xdg-open "$url" 2>/dev/null &
+elif command -v open &>/dev/null; then
+  open "$url" 2>/dev/null &
+else
+  echo "Open in browser: $url"
+fi

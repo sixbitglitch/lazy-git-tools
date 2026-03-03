@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# List branches and switch to the one you select
+set -e
+root=$(git rev-parse --show-toplevel)
+cd "$root"
+current=$(git branch --show-current)
+branches=()
+while IFS= read -r line; do
+  b=$(echo "$line" | sed 's/^[* ]*//')
+  [ -n "$b" ] && branches+=("$b")
+done < <(git branch --list --no-color)
+if [ ${#branches[@]} -eq 0 ]; then
+  echo "No branches found." >&2
+  exit 1
+fi
+echo "Select branch to switch to:"
+i=1
+for b in "${branches[@]}"; do
+  mark=""
+  [ "$b" = "$current" ] && mark=" (current)"
+  echo "  $i) $b$mark"
+  ((i++)) || true
+done
+read -r choice
+choice=$(echo "${choice}" | tr -d '[:space:]')
+if [ -z "$choice" ] || [ "$choice" -lt 1 ] 2>/dev/null || [ "$choice" -gt "${#branches[@]}" ]; then
+  echo "Invalid choice." >&2
+  exit 1
+fi
+target="${branches[$((choice - 1))]}"
+if [ "$target" = "$current" ]; then
+  echo "Already on $current."
+  exit 0
+fi
+git checkout "$target"
+echo "Switched to $target."
