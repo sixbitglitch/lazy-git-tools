@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Remove a submodule (unregister and delete from working tree; keeps .git/modules cleanup)
+# Usage: git-remove-submodule <path>
+set -e
+if [ $# -lt 1 ]; then
+  echo "Usage: git-remove-submodule <path>" >&2
+  exit 1
+fi
+path="$1"
+root=$(git rev-parse --show-toplevel)
+cd "$root"
+git submodule deinit -f "$path"
+git rm -f "$path"
+rm -rf ".git/modules/$path" 2>/dev/null || true
+echo "Removed submodule: $path"

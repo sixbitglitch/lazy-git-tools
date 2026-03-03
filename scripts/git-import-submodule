@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
-# Add a git repo as a submodule in this folder
-# Usage: git-import-submodule <repository-url> [path]
+# Add a git repo as a submodule in the current folder (not repo root)
+# Usage: git-import-submodule <repository-url> [name]
 set -e
 if [ $# -lt 1 ]; then
-  echo "Usage: git-import-submodule <repository-url> [path]" >&2
+  echo "Usage: git-import-submodule <repository-url> [name]" >&2
   exit 1
 fi
 url="$1"
-path="${2:-$(basename "$url" .git)}"
-cd "$(git rev-parse --show-toplevel)"
+name="${2:-$(basename "$url" .git)}"
+root=$(git rev-parse --show-toplevel)
+# Path from repo root to current dir (e.g. "libs/" or "" at root)
+prefix=$(git rev-parse --show-prefix)
+path="${prefix}${name}"
+cd "$root"
 git submodule add "$url" "$path"

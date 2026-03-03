@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Push only the submodule you're currently in (not all submodules)
+set -e
+root=$(git rev-parse --show-toplevel)
+if [ ! -f "$root/.git" ]; then
+  echo "Not inside a submodule. Run this from a submodule directory." >&2
+  exit 1
+fi
+cd "$root"
+git push --set-upstream origin HEAD 2>/dev/null || git push

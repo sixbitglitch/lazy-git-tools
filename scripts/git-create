@@ -1,0 +1,136 @@
+#!/usr/bin/env bash
+# Create a GitHub repo from the current folder and add it as remote
+set -e
+
+# Get GitHub token: env, then .git-credentials, then gh cli
+get_token() {
+  if [ -n "$GITHUB_TOKEN" ]; then
+    echo "$GITHUB_TOKEN"
+    return
+  fi
+  local cred_file="${HOME}/.git-credentials"
+  if [ -f "$cred_file" ]; then
+    local line
+    line=$(grep "github.com" "$cred_file" 2>/dev/null | head -1)
+    if [ -n "$line" ]; then
+      echo "$line" | sed -n 's|https://\([^:]*\):x-oauth-basic@github.com|\1|p'
+      return
+    fi
+  fi
+  if command -v gh &>/dev/null; then
+    gh auth token 2>/dev/null && return
+  fi
+  echo ""
+}
+
+token=$(get_token)
+if [ -z "$token" ]; then
+  echo "No GitHub token found. Run git-login or set GITHUB_TOKEN." >&2
+  exit 1
+fi
+
+echo "Repo name (e.g. my-project):"
+read -r repo_name
+repo_name=$(echo "$repo_name" | tr -d '[:space:]')
+if [ -z "$repo_name" ]; then
+  echo "Repo name is required." >&2
+  exit 1
+fi
+
+# Fetch organisations and list as menu
+orgs_json=$(curl -s -H "Authorization: token $token" -H "Accept: application/vnd.github.v3+json" "https://api.github.com/user/orgs")
+orgs_flat=$(echo "$orgs_json" | tr -d '\n')
+orgs=()
+while IFS= read -r line; do
+  [ -n "$line" ] && orgs+=("$line")
+done < <(echo "$orgs_flat" | grep -o '"login"[[:space:]]*:[[:space:]]*"[^"]*"' | sed 's/.*:[[:space:]]*"\([^"]*\)".*/\1/')
+
+echo "Organisation (number, or Enter for 0 - none):"
+echo "  0) none"
+i=1
+for o in "${orgs[@]}"; do
+  echo "  $i) $o"
+  ((i++)) || true
+done
+read -r org_choice
+org_choice=$(echo "${org_choice:-0}" | tr -d '[:space:]')
+if [ -z "$org_choice" ] || [ "$org_choice" = "0" ]; then
+  org_name=""
+else
+  idx=$((org_choice))
+  if [ "$idx" -ge 1 ] 2>/dev/null && [ "$idx" -le "${#orgs[@]}" ]; then
+    org_name="${orgs[$((idx - 1))]}"
+  else
+    org_name=""
+  fi
+fi
+
+echo "Public or private? (public/private) [default: private]:"
+read -r visibility
+visibility=$(echo "$visibility" | tr '[:upper:]' '[:lower:]')
+if [ "$visibility" != "private" ] && [ "$visibility" != "public" ]; then
+  visibility="private"
+fi
+private="false"
+[ "$visibility" = "private" ] && private="true"
+
+# Create repo on GitHub
+if [ -n "$org_name" ]; then
+  url="https://api.github.com/orgs/${org_name}/repos"
+  owner="$org_name"
+else
+  url="https://api.github.com/user/repos"
+  owner=""  # filled from response
+fi
+
+response=$(curl -s -w "\n%{http_code}" -X POST "$url" \
+  -H "Authorization: token $token" \
+  -H "Accept: application/vnd.github.v3+json" \
+  -d "{\"name\":\"$repo_name\",\"private\":$private}")
+
+http_code=$(echo "$response" | tail -1)
+body=$(echo "$response" | sed '$d')
+
+if [ "$http_code" -ge 400 ]; then
+  err=$(echo "$body" | sed -n 's/.*"message":"\([^"]*\)".*/\1/p')
+  echo "GitHub API error ($http_code): ${err:-$body}" >&2
+  exit 1
+fi
+
+# Normalize JSON to one line so sed can parse (GitHub returns pretty-printed)
+body_flat=$(echo "$body" | tr -d '\n')
+clone_url=$(echo "$body_flat" | sed -n 's/.*"clone_url"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
+owner=$(echo "$body_flat" | sed -n 's/.*"full_name"[[:space:]]*:[[:space:]]*"\([^/]*\)\/[^"]*".*/\1/p')
+[ -z "$owner" ] && owner=$(echo "$body_flat" | sed -n 's/.*"login"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
+
+if [ -z "$clone_url" ]; then
+  echo "Could not parse repo URL from response." >&2
+  exit 1
+fi
+
+# Use HTTPS URL; credential helper (from git-login) will supply token on push
+remote_url="https://github.com/${owner}/${repo_name}.git"
+
+dir="$(pwd)"
+if ! git rev-parse --is-inside-work-tree &>/dev/null; then
+  git init
+  echo "Initialized git in $dir"
+fi
+
+if git remote get-url origin &>/dev/null 2>&1; then
+  git remote set-url origin "$remote_url"
+  echo "Set origin to GitHub repo."
+else
+  git remote add origin "$remote_url"
+  echo "Added remote origin."
+fi
+
+# Prefer main as default branch
+git branch -M main 2>/dev/null || true
+
+# So first git-push sets upstream automatically
+git config push.autoSetupRemote true
+
+echo ""
+echo "Repo created: $clone_url"
+echo "Push your code: git add -A && git commit -m \"Initial commit\" && git push -u origin main"
