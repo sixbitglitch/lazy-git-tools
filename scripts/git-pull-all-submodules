@@ -1,7 +1,23 @@
 #!/usr/bin/env bash
-# Pull/update all submodules in this repo (init, then pull each)
+# Pull/update all submodules (recursive, deepest first), then this repo
+# Recursive: every nested submodule. Order: end of tree first, then work back to root.
 set -e
 root="$(git rev-parse --show-toplevel)"
 cd "$root"
 git submodule update --init --recursive
-git submodule foreach 'git pull' || true
+if [ -f .gitmodules ]; then
+  paths=$(git submodule foreach --recursive --quiet 'echo "$(git rev-parse --show-toplevel)"')
+  for dir in $(echo "$paths" | awk '{a[NR]=$0} END{for(i=NR;i>=1;i--) print a[i]}'); do
+    rel="${dir#$root/}"
+    [ -z "$rel" ] && rel="."
+    echo "Entering '$rel'"
+    (cd "$dir" && {
+      if [ "$(git rev-parse --abbrev-ref HEAD)" = "HEAD" ]; then
+        git checkout main 2>/dev/null || git checkout master 2>/dev/null || true
+      fi
+      git pull || true
+    })
+  done
+fi
+echo "Entering '.'"
+git pull || true
