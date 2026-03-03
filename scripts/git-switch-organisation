@@ -1,0 +1,102 @@
+#!/usr/bin/env bash
+# Switch this repo to a different GitHub organisation (transfer on GitHub, update remote, commit & push)
+set -e
+
+get_token() {
+  if [ -n "$GITHUB_TOKEN" ]; then
+    echo "$GITHUB_TOKEN"
+    return
+  fi
+  local cred_file="${HOME}/.git-credentials"
+  if [ -f "$cred_file" ]; then
+    local line
+    line=$(grep "github.com" "$cred_file" 2>/dev/null | head -1)
+    if [ -n "$line" ]; then
+      echo "$line" | sed -n 's|https://\([^:]*\):x-oauth-basic@github.com|\1|p'
+      return
+    fi
+  fi
+  if command -v gh &>/dev/null; then
+    gh auth token 2>/dev/null && return
+  fi
+  echo ""
+}
+
+token=$(get_token)
+if [ -z "$token" ]; then
+  echo "No GitHub token found. Run git-login or set GITHUB_TOKEN." >&2
+  exit 1
+fi
+
+root=$(git rev-parse --show-toplevel)
+cd "$root"
+
+origin=$(git remote get-url origin 2>/dev/null) || true
+if [ -z "$origin" ]; then
+  echo "No remote 'origin' found." >&2
+  exit 1
+fi
+# Parse owner/repo from https://github.com/owner/repo.git or git@github.com:owner/repo.git
+current_owner=$(echo "$origin" | sed -n 's|.*github\.com[:/]\([^/]*\)/.*|\1|p')
+repo_name=$(echo "$origin" | sed -n 's|.*github\.com[:/][^/]*/\([^/]*\)\.git\?$|\1|p')
+[ -z "$repo_name" ] && repo_name=$(echo "$origin" | sed -n 's|.*github\.com[:/][^/]*/\([^/]*\)$|\1|p')
+if [ -z "$current_owner" ] || [ -z "$repo_name" ]; then
+  echo "Could not parse owner/repo from origin ($origin)." >&2
+  exit 1
+fi
+
+# Fetch organisations
+orgs_json=$(curl -s -H "Authorization: token $token" -H "Accept: application/vnd.github.v3+json" "https://api.github.com/user/orgs")
+orgs_flat=$(echo "$orgs_json" | tr -d '\n')
+orgs=()
+while IFS= read -r line; do
+  [ -n "$line" ] && orgs+=("$line")
+done < <(echo "$orgs_flat" | grep -o '"login"[[:space:]]*:[[:space:]]*"[^"]*"' | sed 's/.*:[[:space:]]*"\([^"]*\)".*/\1/')
+
+if [ ${#orgs[@]} -eq 0 ]; then
+  echo "No organisations found for your account." >&2
+  exit 1
+fi
+
+echo "Current repo: $current_owner/$repo_name"
+echo "Select new organisation (repo will be transferred there):"
+i=1
+for o in "${orgs[@]}"; do
+  mark=""
+  [ "$o" = "$current_owner" ] && mark=" (current)"
+  echo "  $i) $o$mark"
+  ((i++)) || true
+done
+read -r choice
+choice=$(echo "${choice}" | tr -d '[:space:]')
+if [ -z "$choice" ] || [ "$choice" -lt 1 ] 2>/dev/null || [ "$choice" -gt "${#orgs[@]}" ]; then
+  echo "Invalid choice." >&2
+  exit 1
+fi
+new_owner="${orgs[$((choice - 1))]}"
+if [ "$new_owner" = "$current_owner" ]; then
+  echo "Already under $current_owner. Nothing to do."
+  exit 0
+fi
+
+echo "Transferring $current_owner/$repo_name to $new_owner..."
+response=$(curl -s -w "\n%{http_code}" -X POST "https://api.github.com/repos/${current_owner}/${repo_name}/transfer" \
+  -H "Authorization: token $token" \
+  -H "Accept: application/vnd.github.v3+json" \
+  -d "{\"new_owner\":\"$new_owner\"}")
+
+http_code=$(echo "$response" | tail -1)
+body=$(echo "$response" | sed '$d')
+if [ "$http_code" -ge 400 ]; then
+  err=$(echo "$body" | sed -n 's/.*"message":"\([^"]*\)".*/\1/p')
+  echo "GitHub API error ($http_code): ${err:-$body}" >&2
+  exit 1
+fi
+
+git remote set-url origin "https://github.com/${new_owner}/${repo_name}.git"
+echo "Remote updated to $new_owner/$repo_name."
+
+git add -A
+git commit -m "Switch organisation to $new_owner" 2>/dev/null || true
+git push
+echo "Done."
