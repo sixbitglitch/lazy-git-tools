@@ -21,6 +21,7 @@ Cross-platform git helper scripts: pull, push, commit, submodules, branch, creat
 | `git-pull` | Update to latest commit and init/update submodules in this repo |
 | `git-push` | Push changes (including submodules) |
 | `git-commit` [*msg*] | Commit latest changes (default: `"Update"`) |
+| `git-commit-push` [*msg*] | Commit and push in one command (default: `"Update"`) |
 | `git-branch` *name* | Create and switch to a new branch with *name* |
 | `git-switch` | List branches; pick one to switch to |
 | `git-pr` | Open GitHub PR page for the current branch |

@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Commit and push in one command (default message: Update)
+set -e
+cd "$(git rev-parse --show-toplevel)"
+msg="${1:-Update}"
+git add -A
+git commit -m "$msg" || true
+git push --recurse-submodules=on-demand
