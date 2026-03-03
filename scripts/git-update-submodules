@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Commit all latest changes and put any submodule changes back
+# Update all submodules in this repo: commit in each, then commit here
 set -e
 root="$(git rev-parse --show-toplevel)"
 msg="${1:-Update}"

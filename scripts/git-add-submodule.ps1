@@ -1,5 +1,5 @@
 # Add a git repo as a submodule in the current folder (not repo root)
-# Usage: git-import-submodule <repository-url> [name]
+# Usage: git-add-submodule <repository-url> [name]
 param(
   [Parameter(Mandatory=$true, Position=0)]
   [string]$Url,

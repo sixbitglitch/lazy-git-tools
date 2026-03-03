@@ -14,8 +14,8 @@ Run submodule commands (`git-*-submodule`) from inside the submodule directory; 
 | `git-push` | Push changes (including submodules) |
 | `git-commit` [*msg*] | Commit latest changes (default: `"Update"`) |
 | `git-branch` *name* | Create and switch to a new branch |
-| `git-commit-submodules` [*msg*] | Commit in **all** submodules, then in this repo (default: `"Update"`) |
-| `git-import-submodule` *url* [*name*] | Add a repo as submodule in the **current folder** (not repo root) |
+| `git-update-submodules` [*msg*] | Update all submodules in this repo: commit in each, then commit here (default: `"Update"`) |
+| `git-add-submodule` *url* [*name*] | Add a repo as submodule in the **current folder** (not repo root) |
 | `git-remove-submodule` *path* | Remove a submodule and clean up |
 | `git-pull-submodule` | Pull only the **current** submodule |
 | `git-push-submodule` | Push only the **current** submodule |

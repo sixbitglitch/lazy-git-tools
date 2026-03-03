@@ -1,4 +1,4 @@
-# Commit all latest changes and put any submodule changes back
+# Update all submodules in this repo: commit in each, then commit here
 $ErrorActionPreference = "Stop"
 $root = git rev-parse --show-toplevel 2>$null
 if (-not $root) { Write-Error "Not a git repository"; exit 1 }

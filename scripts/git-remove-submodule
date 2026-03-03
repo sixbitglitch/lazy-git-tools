@@ -1,13 +1,21 @@
 #!/usr/bin/env bash
 # Remove a submodule (unregister and delete from working tree; keeps .git/modules cleanup)
-# Usage: git-remove-submodule <path>
+# Usage: git-remove-submodule <path>   (e.g. raretx, ./raretx, or libraries/raretx)
 set -e
 if [ $# -lt 1 ]; then
   echo "Usage: git-remove-submodule <path>" >&2
   exit 1
 fi
 path="$1"
+# Normalize: strip leading ./ and trailing /
+path="${path#./}"
+path="${path%/}"
 root=$(git rev-parse --show-toplevel)
+# If path has no slash and we're in a subdir, resolve relative to repo root
+prefix=$(git rev-parse --show-prefix 2>/dev/null)
+if [ -n "$prefix" ] && [[ "$path" != */* ]]; then
+  path="${prefix}${path}"
+fi
 cd "$root"
 git submodule deinit -f "$path"
 git rm -f "$path"
