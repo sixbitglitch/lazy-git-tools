@@ -11,6 +11,9 @@ if ! command -v git &>/dev/null; then
   exit 1
 fi
 
+# Default new repos to branch "main" (suppresses master/main hint)
+git config --global init.defaultBranch main
+
 # Create install dir if needed
 sudo mkdir -p "$INSTALL_DIR"
 

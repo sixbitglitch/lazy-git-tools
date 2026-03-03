@@ -10,6 +10,9 @@ if ! command -v git &>/dev/null; then
   sudo pacman -S --noconfirm git
 fi
 
+# Default new repos to branch "main" (suppresses master/main hint)
+git config --global init.defaultBranch main
+
 echo "Installing git-tools to $INSTALL_DIR..."
 for f in "$SCRIPT_DIR/scripts"/git-*; do
   [ -f "$f" ] || continue

@@ -11,6 +11,9 @@ if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
   exit 1
 }
 
+# Default new repos to branch "main" (suppresses master/main hint)
+git config --global init.defaultBranch main
+
 # Create install directory
 New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
 
