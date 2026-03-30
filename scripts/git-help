@@ -17,6 +17,8 @@ cat << 'EOF'
   git-pr                    Open GitHub PR page for the current branch
   git-create-ignore <type>  Add .gitignore (unity, godot, node, python, arduino, pico, esp32, dotnet)
   git-add-license <type>    Add LICENSE (CC, unlicense, gpl, mit, none)
+  git-download              Forced pull/reset: overwrite local files (including submodules)
+  git-upload [msg]          Forced commit+push: overwrite remote history (including submodules)
 
   Submodules  (all = from repo root; single = run from inside submodule folder)
   -------------------------------------------------------------------------------

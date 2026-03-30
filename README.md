@@ -28,6 +28,8 @@ Cross-platform git helper scripts: pull, push, commit, submodules, branch, creat
 | `git-pr` | Open GitHub PR page for the current branch |
 | `git-create-ignore` *type* | Add .gitignore for *type*: unity, godot, node, python, arduino, pico, esp32, dotnet |
 | `git-add-license` *type* | Add LICENSE file: CC, unlicense, gpl, mit, or none |
+| `git-download` | **Forced** update: overwrite local files (resets/cleans; includes submodules) |
+| `git-upload` [*msg*] | **Forced** commit & push: overwrite remote history (includes submodules) |
 
 ### Submodules
 `git-*-all-submodules` run from repo root. `git-*-submodule` (no “all”) run from inside the submodule folder and act on that one only.

@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# Pull all repos and submodules, overwriting local files (forced).
+# - Resets each repo/submodule to its upstream (or origin/main|master)
+# - Cleans untracked files (git clean -fdx)
+# - Updates submodules recursively with --force
+set -e
+
+root="$(git rev-parse --show-toplevel)"
+cd "$root"
+
+force_sync_repo() {
+  local dir="$1"
+  (cd "$dir" && {
+    # If detached, try to land on a common branch so @{u} can exist.
+    if [ "$(git rev-parse --abbrev-ref HEAD)" = "HEAD" ]; then
+      git checkout main 2>/dev/null || git checkout master 2>/dev/null || true
+    fi
+
+    git fetch --all --prune || true
+
+    local upstream=""
+    upstream="$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || true)"
+    if [ -z "$upstream" ]; then
+      if git show-ref --verify --quiet refs/remotes/origin/main; then
+        upstream="origin/main"
+      elif git show-ref --verify --quiet refs/remotes/origin/master; then
+        upstream="origin/master"
+      fi
+    fi
+
+    if [ -n "$upstream" ]; then
+      git reset --hard "$upstream" || true
+    fi
+
+    git clean -fdx || true
+
+    # Ensure nested submodules match the superproject pointers.
+    git submodule sync --recursive 2>/dev/null || true
+    git submodule update --init --recursive --force 2>/dev/null || true
+  })
+}
+
+git submodule sync --recursive 2>/dev/null || true
+git submodule update --init --recursive 2>/dev/null || true
+
+if [ -f .gitmodules ]; then
+  paths="$(git submodule foreach --recursive --quiet 'echo "$(git rev-parse --show-toplevel)"')"
+  for dir in $(echo "$paths" | awk '{a[NR]=$0} END{for(i=NR;i>=1;i--) print a[i]}'); do
+    rel="${dir#$root/}"
+    [ -z "$rel" ] && rel="."
+    echo "Entering '$rel'"
+    force_sync_repo "$dir"
+  done
+fi
+
+echo "Entering '.'"
+force_sync_repo "$root"
+
